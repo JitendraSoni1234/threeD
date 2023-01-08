@@ -1,105 +1,97 @@
-// import { Canvas } from "@react-three/fiber";
-// import { OrbitControls, Stars } from "@react-three/drei";
-// import "./App.css";
-// import { Physics, usePlane, useBox } from "@react-three/cannon";
-
-// function Box(props) {
-//   const [ref, api] = useBox(() => ({ mass: 1 }));
-//   return (
-//     <mesh
-//       {...props}
-//       ref={ref}
-//       onClick={() => {
-//         api.velocity.set(2, 0, 0);
-//       }}>
-//       <boxGeometry args={[1, 1, 1]} />
-//       <meshStandardMaterial color={"orange"} />
-//     </mesh>
-//   );
-// }
-
-// function Plane(props) {
-//   const [ref] = usePlane(() => ({ rotation: [-Math.PI / 2, 0, 0] }));
-
-//   return (
-//     <mesh {...props} ref={ref}>
-//       <planeBufferGeometry attach="geometry" args={[100, 100]} />
-//       <meshLambertMaterial attach="material" color="gray" />
-//     </mesh>
-//   );
-// }
-
-// export default function App() {
-//   return (
-//     <Canvas frameloop="demand" shadows camera={{ fov: 50 }}>
-//       <OrbitControls />
-//       <Stars />
-//       <ambientLight />
-//       <Physics>
-//         <Box position={[0, 0.5, 0]} />
-//         <Plane position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} />
-//       </Physics>
-//     </Canvas>
-//   );
-// }
-
-// import React from "react";
+import React, { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Physics, usePlane, useBox } from "@react-three/cannon";
+import {
+  EffectComposer,
+  DepthOfField,
+  Bloom,
+  ChromaticAberration,
+} from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
+import {
+  CubeCamera,
+  Environment,
+  OrbitControls,
+  PerspectiveCamera,
+} from "@react-three/drei";
 import "./App.css";
-import Controls from "./Controls";
+import Boxes from "./Box";
+import Car from "./Car";
+import Ground from "./Ground";
+// import FloatingGrid from "./FloatingGrid";
+import Rings from "./Rings";
+import FloatingGrid from "./Groundboxes";
 
-function Plane(props) {
-  const [ref] = usePlane(() => ({ rotation: [-Math.PI / 2, 0, 0], ...props }));
+function CarShow() {
   return (
-    <mesh ref={ref} receiveShadow>
-      <planeBufferGeometry attach="geometry" args={[1009, 1000]} />
-      <shadowMaterial attach="material" color="#171717" />
-    </mesh>
-  );
-}
+    <>
+      <OrbitControls 
+        target={[0, 0.35, 0]}
+        maxPolarAngle={1.45}
+      />
 
-function Cube(props) {
-  const [ref] = useBox(() => ({
-    mass: 1,
-    position: [0, 5, 0],
-    rotation: [0.4, 0.2, 0.5],
-    ...props
-  }));
-  const color = props.color ? props.color : "hotpink";
-  return (
-    <mesh receiveShadow castShadow ref={ref}>
-      <boxBufferGeometry />
-      <meshLambertMaterial attach="material" color={color} />
-    </mesh>
+      <PerspectiveCamera makeDefault fov={50} position={[3, 2, 5]} />
+
+      <color args={[0, 0, 0]} attach="background" />
+
+      <CubeCamera resolution={256} frames={Infinity}>
+        {(texture) => (
+          <>
+            <Environment map={texture} />
+            <Car />
+          </>
+        )}
+      </CubeCamera>
+
+      <spotLight
+        color={[1, 0.25, 0.7]}
+        intensity={1.5}
+        angle={0.6}
+        penumbra={0.5}
+        position={[5, 5, 0]}
+        castShadow
+        shadow-bias={-0.0001}
+      />
+      <spotLight
+        color={[0.14, 0.5, 1]}
+        intensity={2}
+        angle={0.6}
+        penumbra={0.5}
+        position={[-5, 5, 0]}
+        castShadow
+        shadow-bias={-0.0001}
+      />
+      <Ground />
+      {/* <FloatingGrid /> */}
+      <Boxes />
+      <Rings />
+      <FloatingGrid />
+      <EffectComposer>
+        {/* <DepthOfField focusDistance={0.0035} focalLength={0.01} bokehScale={3} height={480} /> */}
+        <Bloom
+          blendFunction={BlendFunction.ADD}
+          intensity={1.3} // The bloom intensity.
+          width={300} // render width
+          height={300} // render height
+          kernelSize={5} // blur kernel size
+          luminanceThreshold={0.15} // luminance threshold. Raise this value to mask out darker elements in the scene.
+          luminanceSmoothing={0.025} // smoothness of the luminance threshold. Range is [0, 1]
+        />
+        <ChromaticAberration
+          blendFunction={BlendFunction.NORMAL} // blend mode
+          offset={[0.0005, 0.0012]} // color offset
+        />
+      </EffectComposer>
+    </>
   );
 }
 
 function App() {
   return (
-    <Canvas
-      shadowMap
-      sRGB
-      gl={{ alpha: false }}
-      camera={{ position: [-1, 1, 5], fov: 50 }}
-    >
-      <color attach="background" args={["lightblue"]} />
-      <Physics>
-        <Controls />
-        <hemisphereLight intensity={0.35} />
-        <spotLight
-          position={[10, 10, 10]}
-          angle={0.3}
-          penumbra={1}
-          intensity={2}
-          castShadow
-        />
-        <Plane />
-        <Cube />
-        <Cube position={[0, 10, -2]} color="rebeccapurple" />
-        <Cube position={[0, 20, -2]} color="darkseagreen" />
-      </Physics>
-    </Canvas>
+    <Suspense fallback={null}>
+      <Canvas shadows>
+        <CarShow />
+      </Canvas>
+    </Suspense>
   );
 }
 
